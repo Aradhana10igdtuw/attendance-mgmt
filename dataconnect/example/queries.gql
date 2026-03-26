@@ -1,0 +1,34 @@
+query ListAllPublicItems @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  # Assuming your schema has a type that represents a list of public items, e.g., 'products' or 'blogPosts'
+  publicItems {
+    id
+    name
+    description
+  }
+}
+
+query GetMyProfile @auth(level: USER) {
+  # Assuming your schema has a 'user' type and a way to filter by the authenticated user's UID
+  users(where: { uid: { eq_expr: "auth.uid" } }) {
+    id
+    username
+    email
+    createdAt
+  }
+}
+
+mutation CreateNewUserItem($title: String!, $content: String!) @auth(level: USER) {
+  # Assuming your schema has an 'item' type with 'title' and 'content', and a 'userUid' field to link to the creator
+  item_insert(data: {
+    title: $title,
+    content: $content,
+    userUid_expr: "auth.uid" # Links the item to the current authenticated user
+  })
+}
+
+mutation UpdateMyProfile($bio: String) @auth(level: USER) {
+  # Assuming your schema has a 'users' type with a 'uid' as a key and a 'bio' field that can be updated
+  user_update(key: { uid_expr: "auth.uid" }, data: {
+    bio: $bio
+  })
+}
