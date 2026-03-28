@@ -1,5 +1,5 @@
 import Layout from "../components/Layout"
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../hooks/useAuth"
 
 const stats = [
   { label: "Attendance", value: "82%", color: "#4f46e5" },
