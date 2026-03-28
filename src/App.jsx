@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
 import ProtectedRoute from "./components/ProtectedRoute"
+import Attendance from "./pages/Attendance"
 
 function App() {
   return (
@@ -12,8 +13,8 @@ function App() {
           <ProtectedRoute><Dashboard /></ProtectedRoute>
         } />
         <Route path="/attendance" element={
-          <ProtectedRoute><div style={{marginLeft:"240px",padding:"32px"}}><h2>Attendance — coming soon</h2></div></ProtectedRoute>
-        } />
+          <ProtectedRoute><Attendance /></ProtectedRoute>
+        }/>
         <Route path="/marks" element={
           <ProtectedRoute><div style={{marginLeft:"240px",padding:"32px"}}><h2>Marks — coming soon</h2></div></ProtectedRoute>
         } />
