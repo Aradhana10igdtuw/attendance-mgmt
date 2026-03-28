@@ -1,3 +1,4 @@
+import { seedDatabase } from "../seedData"
 import Layout from "../components/Layout"
 import { useAuth } from "../hooks/useAuth"
 
@@ -15,6 +16,13 @@ export default function Dashboard() {
     <Layout>
       <h2 style={styles.heading}>Welcome back!</h2>
       <p style={styles.sub}>{currentUser?.email}</p>
+
+      <button
+      onClick={async () => { await seedDatabase(); alert("Data seeded!") }}
+      style={{ marginBottom: "24px", padding: "8px 16px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}
+      >
+       Seed test data
+      </button>
 
       <div style={styles.grid}>
         {stats.map((s) => (
