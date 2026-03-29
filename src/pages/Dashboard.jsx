@@ -3,6 +3,7 @@ import { collection, query, where, getDocs } from "firebase/firestore"
 import { db } from "../firebase"
 import { useAuth } from "../hooks/useAuth"
 import Layout from "../components/Layout"
+import { seedMarks } from "../seedData"
 
 export default function Dashboard() {
   const { currentUser } = useAuth()
@@ -100,6 +101,12 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+      <button
+        onClick={async () => { await seedMarks(); alert("Marks seeded!") }}
+        style={{ marginBottom: "16px", padding: "8px 16px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer" }}
+      >
+        Seed marks data
+      </button>
 
       {/* Stats row */}
       <div style={styles.statsGrid}>

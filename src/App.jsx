@@ -3,6 +3,7 @@ import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
 import ProtectedRoute from "./components/ProtectedRoute"
 import Attendance from "./pages/Attendance"
+import Marks from "./pages/Marks"
 
 function App() {
   return (
@@ -16,7 +17,7 @@ function App() {
           <ProtectedRoute><Attendance /></ProtectedRoute>
         }/>
         <Route path="/marks" element={
-          <ProtectedRoute><div style={{marginLeft:"240px",padding:"32px"}}><h2>Marks — coming soon</h2></div></ProtectedRoute>
+          <ProtectedRoute><Marks /></ProtectedRoute>
         } />
         <Route path="/assignments" element={
           <ProtectedRoute><div style={{marginLeft:"240px",padding:"32px"}}><h2>Assignments — coming soon</h2></div></ProtectedRoute>
