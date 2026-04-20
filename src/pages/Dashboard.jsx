@@ -9,7 +9,9 @@ export default function Dashboard() {
   if (loading) {
     return (
       <Layout>
-        <h2>Loading dashboard...</h2>
+        <div style={{ padding: "40px", textAlign: "center" }}>
+          <h2>Loading your dashboard...</h2>
+        </div>
       </Layout>
     )
   }
