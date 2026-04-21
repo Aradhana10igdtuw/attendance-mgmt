@@ -13,6 +13,12 @@ export default function StudentDashboard() {
   const [stats, setStats] = useState({ avgAttendance: 0, lowSubjects: 0, totalSubjects: 0 })
   const [loadingStats, setLoadingStats] = useState(true)
   const [time, setTime] = useState(new Date())
+  const [selectedClassFallback, setSelectedClassFallback] = useState(userData?.class || "IT1")
+  const [rollNoFallback, setRollNoFallback] = useState(userData?.rollNo || "")
+  const [savingClass, setSavingClass] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+
+  const CLASS_OPTIONS = ["IT1", "IT2", "IT3", "CSE1", "CSE2", "ECE1", "ECE2"]
 
   // Timer for Clock
   useEffect(() => {
@@ -34,17 +40,19 @@ export default function StudentDashboard() {
 
       const attQ = query(
         collection(db, "attendance"),
-        where("studentId", "==", currentUser.uid) // Using UID consistently
+        where("studentId", "==", currentUser.uid)
       )
       const attSnap = await getDocs(attQ)
       const records = attSnap.docs.map((d) => d.data())
 
       let totalPct = 0, lowCount = 0
       subjects.forEach((s) => {
-        const sub = records.filter((r) => r.subjectCode === s.code || r.subject === s.name)
-        const pct = sub.length === 0 ? 0 : Math.round((sub.length / 40) * 100) // Mock logic for demo
+        const subRecords = records.filter((r) => r.subjectCode === s.code)
+        const attended = subRecords.filter((r) => r.present).length
+        const total = subRecords.length
+        const pct = total === 0 ? 0 : Math.round((attended / total) * 100)
         totalPct += pct
-        if (pct < 75 && sub.length > 0) lowCount++
+        if (pct < 75 && total > 0) lowCount++
       })
 
       setStats({
@@ -74,6 +82,11 @@ export default function StudentDashboard() {
           try {
              sessionData = JSON.parse(text)
              if (!sessionData.sessionId) throw new Error("Invalid QR data")
+             
+             if (sessionData.expiresAt && Date.now() > sessionData.expiresAt) {
+               alert("This QR code has expired. Please ask the teacher to generate a new one.")
+               return
+             }
           } catch (e) {
              alert("Invalid QR code scanned.")
              return
@@ -86,6 +99,8 @@ export default function StudentDashboard() {
             studentEmail: currentUser.email,
             sessionId: sessionData.sessionId,
             subject: sessionData.subject || "Unknown",
+            subjectCode: sessionData.subjectCode || "N/A",
+            present: true,
             date: sessionData.date || new Date().toISOString().split('T')[0],
             teacherId: sessionData.teacherId || "Unknown",
             timestamp: Date.now()
@@ -129,11 +144,101 @@ export default function StudentDashboard() {
     { time: "4:00 PM", subject: "Fundamentals of DevOps", room: "Lab-1", type: "Lab" },
   ]
 
-  const notices = [
-    { text: "Mid-semester examinations scheduled from March 15", date: "Today", urgent: true },
-    { text: "DevOps project submission deadline extended to April 1", date: "Yesterday", urgent: false },
-    { text: "Technical fest TechnoVortex registrations open", date: "2 days ago", urgent: false },
-  ]
+  const [notices, setNotices] = useState([])
+
+  useEffect(() => {
+    if (userData?.class) {
+      const fetchNotices = async () => {
+        try {
+          const q = query(
+            collection(db, "notifications"),
+            where("targetClass", "==", userData.class),
+            orderBy("createdAt", "desc"),
+            limit(5)
+          )
+          const snap = await getDocs(q)
+          setNotices(snap.docs.map(d => ({
+            text: d.data().message,
+            date: new Date(d.data().createdAt).toLocaleDateString(),
+            urgent: d.data().type === "warning"
+          })))
+        } catch (e) {
+          console.error(e)
+        }
+      }
+      fetchNotices()
+    }
+  }, [userData?.class])
+
+  const handleSaveClass = async () => {
+    setSavingClass(true)
+    try {
+      await setDoc(doc(db, "users", currentUser.uid), {
+        class: selectedClassFallback,
+        rollNo: rollNoFallback.trim()
+      }, { merge: true })
+      setShowEdit(false)
+      window.location.reload()
+    } catch (err) {
+      console.error(err)
+      alert("Failed to save profile.")
+    } finally {
+      setSavingClass(false)
+    }
+  }
+
+  if (!userData?.class || showEdit) {
+    return (
+      <div style={{...styles.container, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "80vh"}}>
+        <div style={styles.fallbackCard}>
+          <div style={{fontSize: "48px", marginBottom: "16px"}}>🏫</div>
+          <h2 style={{margin: 0, color: "#1a1a2e"}}>{showEdit ? "Update Profile" : "Complete your profile"}</h2>
+          <p style={{color: "#64748b", margin: "8px 0 24px", maxWidth: "300px", textAlign: "center"}}>
+            Ensure your class and roll number are correct to receive relevant updates.
+          </p>
+          
+          <div style={{width: "100%", marginBottom: "16px"}}>
+            <label style={styles.fieldLabel}>Roll Number</label>
+            <input 
+              style={{...styles.input, width: "100%"}}
+              placeholder="e.g. 22BIT001"
+              value={rollNoFallback}
+              onChange={(e) => setRollNoFallback(e.target.value)}
+            />
+          </div>
+
+          <div style={{width: "100%", marginBottom: "24px"}}>
+            <label style={styles.fieldLabel}>Select Class</label>
+            <select 
+              style={{...styles.input, width: "100%", height: "45px"}}
+              value={selectedClassFallback}
+              onChange={(e) => setSelectedClassFallback(e.target.value)}
+            >
+              {CLASS_OPTIONS.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+            </select>
+          </div>
+
+          <div style={{display: "flex", gap: "10px", width: "100%"}}>
+            {showEdit && (
+              <button 
+                style={{...styles.btn, flex: 1, background: "#f1f5f9", color: "#64748b"}}
+                onClick={() => setShowEdit(false)}
+              >
+                Cancel
+              </button>
+            )}
+            <button 
+              style={{...styles.btn, flex: 2, background: "linear-gradient(135deg, #4f46e5, #7c3aed)"}}
+              onClick={handleSaveClass}
+              disabled={savingClass}
+            >
+              {savingClass ? "Saving..." : "Save Profile"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={styles.container}>
@@ -143,6 +248,11 @@ export default function StudentDashboard() {
         <div style={styles.heroContent}>
           <p style={styles.heroGreeting}>{getGreeting()},</p>
           <h1 style={styles.heroName}>{firstName}</h1>
+          <div style={styles.heroMeta}>
+            <span style={styles.heroBadge}>{userData?.class || "No Class"}</span>
+            <span style={styles.heroBadge}>{userData?.rollNo || "No Roll No"}</span>
+            <button onClick={() => setShowEdit(true)} style={styles.editBtn}>✎ Edit Profile</button>
+          </div>
           <p style={styles.heroSub}>Indira Gandhi Delhi Technical University for Women</p>
         </div>
         <div style={styles.heroClock}>
@@ -253,7 +363,7 @@ const styles = {
   hero: {
     position: "relative", borderRadius: "16px", overflow: "hidden",
     marginBottom: "24px", height: "180px",
-    background: "linear-gradient(135deg, #1a1a2e 0%, #4f46e5 60%, #7c3aed 100%)",
+    background: "linear-gradient(135deg, #0d9488 0%, #0f766e 60%, #115e59 100%)",
     display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "0 32px"
   },
@@ -264,6 +374,9 @@ const styles = {
   heroContent: { position: "relative", zIndex: 1 },
   heroGreeting: { margin: 0, color: "rgba(255,255,255,0.7)", fontSize: "14px" },
   heroName: { margin: "4px 0", color: "#fff", fontSize: "32px", fontWeight: "600", textTransform: "capitalize" },
+  heroMeta: { display: "flex", gap: "10px", alignItems: "center", margin: "8px 0 12px" },
+  heroBadge: { background: "rgba(255,255,255,0.2)", color: "#fff", padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "500", backdropFilter: "blur(4px)" },
+  editBtn: { background: "none", border: "none", color: "rgba(255,255,255,0.7)", fontSize: "12px", cursor: "pointer", padding: "4px 8px", textDecoration: "underline" },
   heroSub: { margin: 0, color: "rgba(255,255,255,0.6)", fontSize: "13px" },
   heroClock: { position: "relative", zIndex: 1, textAlign: "right" },
   clockTime: { margin: 0, color: "#fff", fontSize: "28px", fontWeight: "300", fontFamily: "monospace" },
@@ -277,12 +390,12 @@ const styles = {
   section: { background: "#fff", borderRadius: "12px", padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" },
   sectionTitle: { margin: "0 0 16px", fontSize: "15px", fontWeight: "500", color: "#1a1a2e" },
   scannerBox: { textAlign: "center", padding: "10px 0" },
-  btn: { padding: "12px 24px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "500" },
-  successBox: { color: "#0f6e56", fontWeight: "500" },
+  btn: { padding: "12px 24px", background: "#0d9488", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: "500" },
+  successBox: { color: "#0f766e", fontWeight: "500" },
   scheduleItem: { display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" },
   scheduleTime: { width: "72px", flexShrink: 0 },
   timeText: { margin: 0, fontSize: "12px", color: "#888", fontWeight: "500" },
-  scheduleBar: { width: "3px", height: "36px", background: "#4f46e5", borderRadius: "2px", flexShrink: 0 },
+  scheduleBar: { width: "3px", height: "36px", background: "#0d9488", borderRadius: "2px", flexShrink: 0 },
   scheduleInfo: { flex: 1 },
   scheduleSubject: { margin: "0 0 4px", fontSize: "13px", fontWeight: "500", color: "#1a1a2e" },
   scheduleRow: { display: "flex", alignItems: "center", gap: "8px" },
@@ -293,5 +406,17 @@ const styles = {
   noticeText: { margin: 0, fontSize: "13px", color: "#333", lineHeight: "1.5" },
   noticeDate: { margin: "4px 0 0", fontSize: "11px", color: "#aaa" },
   footerLinks: { display: "flex", flexDirection: "column", gap: "8px" },
-  link: { color: "#4f46e5", fontSize: "13px", textDecoration: "none", fontWeight: "500" }
+  link: { color: "#0d9488", fontSize: "13px", textDecoration: "none", fontWeight: "500" },
+  fallbackCard: { 
+    background: "#fff", padding: "40px", borderRadius: "20px", 
+    boxShadow: "0 20px 50px rgba(0,0,0,0.1)",
+    display: "flex", flexDirection: "column", alignItems: "center", width: "100%", maxWidth: "400px"
+  },
+  input: {
+    padding: "11px 14px", borderRadius: "10px",
+    border: "1.5px solid #e5e7eb", fontSize: "14px",
+    outline: "none", transition: "border 0.2s",
+    color: "#1a1a2e", background: "#fff", boxSizing: "border-box"
+  },
+  fieldLabel: { display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "8px" }
 }

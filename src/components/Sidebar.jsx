@@ -5,7 +5,8 @@ import { useAuth } from "../hooks/useAuth"
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
-  { label: "Attendance", path: "/attendance" },
+  { label: "Attendance", path: "/attendance", studentOnly: true },
+  { label: "Students Data", path: "/students-data", teacherOnly: true },
   { label: "Marks", path: "/marks" },
   { label: "Assignments", path: "/assignments" },
   { label: "Notifications", path: "/notifications" },
@@ -14,7 +15,7 @@ const navItems = [
 export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { currentUser } = useAuth()
+  const { currentUser, userData } = useAuth()
 
   const handleLogout = async () => {
     await signOut(auth)
@@ -37,7 +38,13 @@ export default function Sidebar() {
         </div>
 
         <nav>
-          {navItems.map((item) => (
+          {navItems
+            .filter(item => {
+              if (item.teacherOnly && userData?.role !== "teacher") return false
+              if (item.studentOnly && userData?.role !== "student") return false
+              return true
+            })
+            .map((item) => (
             <div
               key={item.path}
               onClick={() => navigate(item.path)}
@@ -77,7 +84,7 @@ const styles = {
   },
   avatar: {
     width: "32px", height: "32px", borderRadius: "50%",
-    background: "#4f46e5", display: "flex",
+    background: "#0d9488", display: "flex",
     alignItems: "center", justifyContent: "center",
     fontSize: "14px", fontWeight: "600", flexShrink: 0
   },
@@ -91,7 +98,7 @@ const styles = {
     marginBottom: "4px", transition: "all 0.2s"
   },
   navActive: {
-    background: "#4f46e5", color: "#fff", fontWeight: "500"
+    background: "#0d9488", color: "#fff", fontWeight: "500"
   },
   logoutBtn: {
     padding: "10px", borderRadius: "8px", border: "none",

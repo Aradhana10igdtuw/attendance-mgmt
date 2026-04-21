@@ -22,7 +22,7 @@ export default function Attendance() {
 
       const attQ = query(
         collection(db, "attendance"),
-        where("studentId", "==", currentUser.email)
+        where("studentId", "==", currentUser.uid)
       )
       const attSnap = await getDocs(attQ)
       const records = attSnap.docs.map((d) => d.data())
